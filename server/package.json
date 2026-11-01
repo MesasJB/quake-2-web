@@ -1,0 +1,1 @@
+{ "name": "quake2-proxy", "version": "1.0.0", "private": true, "scripts": { "start": "node proxy.js" } }

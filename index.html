@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quake 2</title>
+<style>
+  :root{--bg:#07080c;--card:#0f121a;--panel:#0c0f16;--line:#1c2230;--tx:#e6e8f0;--mut:#8b93ad;--dim:#6b7390;--btn:#171a27;--btnline:#252a3b}
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:var(--bg);color:var(--tx);font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif}
+  body{display:flex;align-items:center;justify-content:center;padding:16px;min-height:100vh}
+  button{font:inherit;cursor:pointer}
+
+  /* ---------- pantalla de inicio (tarjeta) ---------- */
+  .card{width:100%;max-width:1280px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:90px 24px 100px;text-align:center}
+  .kicker{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--dim);margin:0 0 18px}
+  h1{margin:0 0 14px;font-size:64px;letter-spacing:.12em;font-weight:800;line-height:1.1}
+  .desc{max-width:520px;margin:0 auto 28px;color:var(--mut);font-size:16px;line-height:1.5}
+  .play{background:#fff;color:#000;border:0;border-radius:10px;padding:13px 27px;font-weight:600;font-size:17px}
+  .play:hover{background:#e9ebf2}.play[disabled]{opacity:.6;cursor:default}
+  #loading{display:none;margin-top:26px}
+  #status{color:var(--mut);font-size:14px;margin-bottom:10px}
+  progress{width:min(420px,80%);height:8px;accent-color:#fff}
+
+  /* ---------- juego + panel online ---------- */
+  .shell{display:none;width:100%;max-width:1280px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;grid-template-columns:minmax(0,1fr) 280px;gap:16px}
+  .stage{position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:10px;overflow:hidden}
+  .stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;border:0;outline:none;background:#000}
+  .stage:fullscreen{aspect-ratio:auto;border-radius:0}
+  textarea#output{display:none;width:100%;aspect-ratio:16/9;background:#000;color:#c0c0c0;border:1px solid var(--line);border-radius:10px;font:13px monospace;resize:none}
+  .bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px}
+  .hint{flex:1;min-width:200px;color:var(--dim);font-size:13px;line-height:1.4}
+  #fps{color:var(--dim);font-size:13px;font-variant-numeric:tabular-nums}
+  .bar button{background:var(--btn);color:var(--tx);border:1px solid var(--btnline);border-radius:10px;padding:11px 16px;font-weight:600;font-size:14px}
+  .bar button:hover{background:#1e2233}
+
+  .side{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;align-self:start;font-size:13px;color:var(--mut);line-height:1.5}
+  .side h3{margin:0 0 10px;font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+  .st{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  #dot{width:9px;height:9px;border-radius:50%;background:#5b6379;flex:none}
+  #dot.ok{background:#2fd06b}#dot.warn{background:#e6b422}#dot.bad{background:#e5534b}
+  .side b{color:var(--tx)}
+  .rooms{margin:14px 0}
+  .room{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#121623;border:1px solid var(--line);border-radius:8px;padding:9px 10px;margin-top:8px}
+  .room strong{display:block;color:var(--tx);font-size:13px}.room span{font-size:12px}
+  .room button{background:#fff;color:#000;border:0;border-radius:7px;padding:6px 10px;font-weight:600;font-size:12px}
+  details{margin-top:12px}
+  summary{cursor:pointer;color:var(--mut);font-size:12.5px}
+  .f{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+  .f label{font-size:12px;color:var(--dim)}
+  .f input[type=text]{background:#0a0c12;color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;font-size:13px;width:100%}
+  .f button{background:#fff;color:#000;border:0;border-radius:8px;padding:8px 12px;font-weight:600}
+  .chk{display:flex;gap:6px;align-items:center;color:var(--mut);font-size:12.5px}
+  /* ---------- ventanita Multiplayer (name? / salas) ---------- */
+  #mp{position:absolute;inset:0;z-index:5;display:none;align-items:center;justify-content:center;background:rgba(3,4,8,.72);padding:12px}
+  #mp.open{display:flex}
+  .mpbox{width:min(480px,100%);max-height:100%;overflow:auto;background:var(--card);border:1px solid var(--btnline);border-radius:12px;padding:18px 18px 16px;color:var(--mut);font-size:13px;line-height:1.5;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+  .mpbox h4{margin:0 0 4px;font-size:15px;color:var(--tx);letter-spacing:.04em}
+  .mpbox .row2{display:flex;gap:8px;align-items:center;margin:10px 0 4px}
+  .mpbox input[type=text],.mpbox select{flex:1;min-width:0;background:#0a0c12;color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:9px 11px;font:inherit}
+  .mpbox button{background:#fff;color:#000;border:0;border-radius:8px;padding:9px 14px;font-weight:600;font-size:13px}
+  .mpbox button.ghost{background:transparent;color:var(--mut);border:1px solid var(--btnline)}
+  .mpbox button[disabled]{opacity:.5}
+  .mpbox .err{color:#f08a8a;margin-top:8px;min-height:18px}
+  .mpbox .sep{border-top:1px solid var(--line);margin:14px 0 10px}
+  .mpbox .lab{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:2px 0 6px}
+  .nm{font-size:22px;font-weight:700;color:var(--tx);letter-spacing:.02em}
+  @media (max-width:900px){.shell{grid-template-columns:1fr}h1{font-size:44px}}
+</style>
+</head>
+<body>
+
+<div class="card" id="card">
+  <p class="kicker">Decompilación Qwasm</p>
+  <h1>QUAKE</h1>
+  <p class="desc">Quake 2 corriendo directo en tu navegador. Al tocar Jugar se descarga el juego y empieza solo.</p>
+  <button class="play" id="playBtn">▶ Jugar</button>
+  <div id="loading"><div id="status">Descargando…</div><progress id="progress" value="0" max="100"></progress></div>
+</div>
+
+<div class="shell" id="game">
+  <div>
+    <div class="stage" id="stage">
+      <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+      <div id="mp" role="dialog" aria-label="Multiplayer">
+        <div class="mpbox">
+          <div id="mpReg">
+            <h4>Multiplayer</h4>
+            <div class="nm">name?:</div>
+            <div>Elegí tu nombre para jugar online (hasta 15 letras, números, espacio, - y _).</div>
+            <div class="row2"><input type="text" id="mpName" maxlength="15" placeholder="tu nombre" autocomplete="off" spellcheck="false"><button id="mpRegBtn">Registrarme</button></div>
+            <div class="err" id="mpErr1"></div>
+            <div class="row2" style="justify-content:flex-end"><button class="ghost" data-close>Cerrar</button></div>
+          </div>
+          <div id="mpRooms" style="display:none">
+            <h4>Salas online</h4>
+            <div>Jugador: <b id="mpWho" style="color:var(--tx)"></b> <button class="ghost" id="mpChange" style="padding:3px 9px;font-size:12px;margin-left:6px">cambiar</button></div>
+            <div class="sep"></div>
+            <div class="lab">Salas disponibles</div>
+            <div id="mpList">Buscando salas…</div>
+            <div class="sep"></div>
+            <div class="lab">Crear sala</div>
+            <div class="row2"><input type="text" id="mpRName" maxlength="20" placeholder="nombre de la sala" autocomplete="off" spellcheck="false"></div>
+            <div class="row2"><select id="mpMap"></select><select id="mpMax"><option value="2">2 jug.</option><option value="3">3 jug.</option><option value="4" selected>4 jug.</option></select></div>
+            <div class="row2"><button id="mpCreate">Crear y entrar</button><button class="ghost" data-close style="margin-left:auto">Cerrar</button></div>
+            <div class="err" id="mpErr2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <textarea id="output" readonly></textarea>
+    <div class="bar">
+      <div class="hint">Hacé clic en el juego para capturar el mouse. Esc abre el menú. En pantalla completa, mantené Esc ~2 s para salir.</div>
+      <span id="fps">-- FPS</span>
+      <button id="clearBtn">🗑 Borrar guardado</button>
+      <button id="fsBtn">⛶ Pantalla completa</button>
+    </div>
+  </div>
+  <aside class="side" id="online">
+    <h3>Salas online</h3>
+    <div class="st"><i id="dot"></i><span id="onStatus">Sin conectar</span></div>
+    <div>Jugador: <b id="who">WASM Player</b><br>
+    Para registrarte o cambiar tu nombre: <b>Multiplayer → join network server</b> (aparece <b>name?:</b>).</div>
+    <div class="rooms" id="rooms">Buscando salas…</div>
+  </aside>
+</div>
+
+<script>
+// ---- Audio: el navegador bloquea el sonido hasta que hay interacción. Capturamos los
+// AudioContext que crea el motor y los reanudamos en cada clic/tecla/captura de mouse.
+(function(){
+  var Orig = window.AudioContext || window.webkitAudioContext;
+  if(!Orig) return;
+  var ctxs = (window.__q2audio = []);
+  function Patched(){ var c = new (Function.prototype.bind.apply(Orig,[null].concat([].slice.call(arguments))))(); ctxs.push(c);
+    console.info('[audio] AudioContext creado, estado:', c.state); return c; }
+  Patched.prototype = Orig.prototype;
+  window.AudioContext = Patched; window.webkitAudioContext = Patched;
+  function wake(){ ctxs.forEach(function(c){ if(c.state!=='running'){ c.resume().then(function(){ console.info('[audio] reanudado:', c.state); }).catch(function(){}); } }); }
+  ['click','pointerdown','mousedown','keydown','touchstart','touchend'].forEach(function(e){ document.addEventListener(e,wake,true); });
+  document.addEventListener('pointerlockchange',wake);
+  setInterval(wake,1000);
+})();
+
+(function(){
+  var DEFAULT_SERVER = 'wss://quake-2-web.onrender.com';   // servidor online incluido: nadie tiene que pegar ningún link
+  var PAK_PARTS = 4, PAK_BASE = 'baseq2/pak0.part';
+  var $ = function(i){return document.getElementById(i)};
+  var canvas=$('canvas'), out=$('output'), statusEl=$('status'), prog=$('progress');
+  var LS = { get:function(k){ try{return localStorage.getItem(k)||'';}catch(e){return '';} }, set:function(k,v){ try{localStorage.setItem(k,v);}catch(e){} } };
+
+  function setStatus(t,v,m){
+    statusEl.textContent=t;
+    if(v!=null){prog.max=m||100;prog.value=v;prog.style.display='';} else prog.style.display='none';
+  }
+
+  // pak0 por trozos directo al sistema de archivos virtual
+  async function loadPak(){
+    try{FS.mkdirTree('/baseq2');}catch(e){}
+    var stream=FS.open('/baseq2/pak0.pak','w');
+    for(var i=0;i<PAK_PARTS;i++){
+      setStatus('Descargando juego ('+(i+1)+'/'+PAK_PARTS+')',i,PAK_PARTS);
+      var r=await fetch(PAK_BASE+i);
+      if(!r.ok) throw new Error('No se pudo bajar '+PAK_BASE+i+' ('+r.status+')');
+      var buf=new Uint8Array(await r.arrayBuffer());
+      FS.write(stream,buf,0,buf.length);
+    }
+    FS.close(stream);
+  }
+
+  // ---------- Salas online ----------
+  var onStatus=$('onStatus'), dot=$('dot');
+  function setOn(t,cls){ onStatus.textContent=t; dot.className=cls||''; }
+  function normUrl(u){
+    u=(u||'').trim(); if(!u) return '';
+    u=u.replace(/^http:\/\//i,'ws://').replace(/^https:\/\//i,'wss://');
+    if(!/^wss?:\/\//i.test(u)) u='wss://'+u;
+    return u;
+  }
+  function httpBase(ws){ return ws.replace(/^ws/i,'http').replace(/(https?:\/\/[^\/]+).*/,'$1'); }
+  var srvOverride='';   // solo para pruebas: abrir la página con ?srv=wss://otro-servidor
+  function getSrv(){ return normUrl(srvOverride||DEFAULT_SERVER); }
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+
+  var started=false, netIntent=false;
+  function sendCmd(c){ Module.pendingCmd=String(c).replace(/[^\x20-\x7e]/g,' ').slice(0,200); }   // el motor lo ejecuta en el próximo frame
+  function getNick(){ return LS.get('q2_nick'); }
+  function apiBase(){ var u=getSrv(); return u?httpBase(u):''; }
+  function fetchRooms(){ var b=apiBase(); if(!b) return Promise.reject(new Error('sin servidor'));
+    return fetch(b+'/rooms',{cache:'no-store'}).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }); }
+  function roomLine(r){ return '<div class="room"><div><strong>'+esc(r.name)+'</strong><span>'+esc(r.mode)+' · '+esc(r.map)+' · '+r.players+'/'+r.maxclients+'</span></div><button data-join="'+esc(r.id)+'"'+(r.online&&r.players<r.maxclients?'':' disabled')+'>Unirse</button></div>'; }
+  function renderInto(el,data){
+    if(!getSrv()){ el.textContent='Configurá un servidor para ver las salas.'; return; }
+    if(!data||!data.rooms||!data.rooms.length){ el.textContent='No hay salas todavía. Si el servidor estaba dormido, esperá 1 minuto.'; return; }
+    el.innerHTML=data.rooms.map(roomLine).join('');
+  }
+  var lastData=null;
+  function pollRooms(){
+    if(!getSrv()){ renderInto($('rooms'),null); return; }
+    fetchRooms().then(function(d){ lastData=d; renderInto($('rooms'),d); if(mpOpen) renderInto($('mpList'),d); fillMaps(d); })
+      .catch(function(){ lastData=null; renderInto($('rooms'),null); if(mpOpen) $('mpList').textContent='No se pudo conectar con el servidor. Reintentando…'; });
+  }
+  function fillMaps(d){
+    var sel=$('mpMap'); if(!d||!d.maps||sel.options.length) return;
+    d.maps.forEach(function(m){ var o=document.createElement('option'); o.value=m; o.textContent=m; sel.appendChild(o); });
+  }
+  // Unirse a una sala: se cambia la URL del WebSocket (una sala = un servidor) y se manda "connect" al motor.
+  // Cada sala usa un nombre de host distinto para que el motor abra una conexión nueva.
+  function joinRoom(id){
+    var nick=getNick();
+    if(!nick){ openMP(); return; }
+    var base=getSrv(); if(!base){ openMP(); return; }
+    base=base.replace(/\/+$/,'').replace(/\?.*$/,'');
+    Module.websocket={url:base+'/?room='+encodeURIComponent(id),subprotocol:'binary'};
+    sendCmd('name '+nick+';connect sala-'+id.replace(/[^a-z0-9]/gi,'')+':27910');
+    netIntent=true; setOn('Conectando…','warn');
+    closeMP();
+  }
+  document.addEventListener('click',function(e){
+    var j=e.target.closest&&e.target.closest('[data-join]'); if(j&&!j.disabled) joinRoom(j.getAttribute('data-join'));
+  });
+
+  // ---------- Ventanita Multiplayer ----------
+  var mpOpen=false, mpTimer=null;
+  function showStep(){
+    var reg=!!getNick();
+    $('mpReg').style.display=reg?'none':'block'; $('mpRooms').style.display=reg?'block':'none';
+    if(reg){ $('mpWho').textContent=getNick(); $('mpErr2').textContent=''; renderInto($('mpList'),lastData); pollRooms(); }
+    else { $('mpName').value=''; $('mpErr1').textContent=''; setTimeout(function(){ $('mpName').focus(); },30); }
+  }
+  function openMP(mode){
+    if(mpOpen) return; mpOpen=true;
+    try{ document.exitPointerLock(); }catch(e){}
+    $('mp').classList.add('open'); showStep();
+    if(mode==='create'&&getNick()) setTimeout(function(){ $('mpRName').focus(); },60);
+    mpTimer=setInterval(pollRooms,4000);
+  }
+  function closeMP(){ mpOpen=false; $('mp').classList.remove('open'); clearInterval(mpTimer); try{ canvas.focus(); }catch(e){} }
+  function cleanNick(v){ return (v||'').replace(/[^\w\- ]/g,'').trim().slice(0,15); }
+  function doRegister(){
+    var n=cleanNick($('mpName').value);
+    if(n.length<2){ $('mpErr1').textContent='El nombre tiene que tener al menos 2 caracteres.'; return; }
+    LS.set('q2_nick',n); $('who').textContent=n;
+    sendCmd('name '+n);
+    showStep();
+  }
+  $('mpRegBtn').onclick=doRegister;
+  $('mpChange').onclick=function(){ LS.set('q2_nick',''); showStep(); };
+  $('mpCreate').onclick=function(){
+    var name=($('mpRName').value||'').replace(/[^A-Za-z0-9 _\-]/g,'').trim();
+    if(!name){ $('mpErr2').textContent='Poné un nombre para la sala.'; return; }
+    var btn=this; btn.disabled=true; $('mpErr2').textContent='Creando sala…';
+    fetch(apiBase()+'/rooms',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:name,map:$('mpMap').value||'base1',mode:'coop',maxclients:parseInt($('mpMax').value,10)})})
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,j:j}; }); })
+      .then(function(x){
+        btn.disabled=false;
+        if(!x.ok){ $('mpErr2').textContent=(x.j&&x.j.error)||'No se pudo crear la sala.'; return; }
+        $('mpRName').value=''; $('mpErr2').textContent='';
+        setTimeout(function(){ joinRoom(x.j.id); },1500);       // le damos un momento al servidor para arrancar
+      }).catch(function(){ btn.disabled=false; $('mpErr2').textContent='No se pudo conectar con el servidor.'; });
+  };
+  document.querySelectorAll('[data-close]').forEach(function(b){ b.onclick=closeMP; });
+  // Mientras la ventanita está abierta, el teclado es de la ventanita (que el motor no se coma las teclas)
+  window.addEventListener('keydown',function(e){
+    if(!mpOpen) return;
+    if(e.key==='Escape'){ closeMP(); e.stopImmediatePropagation(); e.preventDefault(); return; }
+    if(e.key==='Enter'){ if($('mpReg').style.display!=='none') doRegister(); else if(document.activeElement===$('mpRName')) $('mpCreate').click(); }
+    e.stopImmediatePropagation();
+  },true);
+  ['keyup','keypress'].forEach(function(t){ window.addEventListener(t,function(e){ if(mpOpen) e.stopImmediatePropagation(); },true); });
+
+  function testServer(url){
+    if(!url){ setOn('Sin conectar'); return; }
+    setOn('Probando servidor…','warn');
+    var done=false, ws;
+    var t=setTimeout(function(){ if(done) return; done=true; try{ws.close();}catch(e){} setOn('No responde (si estaba dormido, esperá 1 minuto)','bad'); },20000);
+    try{ ws=new WebSocket(url,'binary'); }catch(e){ clearTimeout(t); setOn('Dirección inválida','bad'); return; }
+    ws.onopen=function(){ if(done) return; done=true; clearTimeout(t); setOn('Servidor disponible','ok'); try{ws.close();}catch(e){} };
+    ws.onerror=function(){ if(done) return; done=true; clearTimeout(t); setOn('No se pudo conectar al servidor','bad'); };
+  }
+  // ?srv=wss://... en la dirección de la página lo guarda una vez
+  var rawArgs = location.search.length>1 ? location.search.substr(1).split('&') : [];
+  var engineArgs = [];
+  rawArgs.forEach(function(a){ var m=a.match(/^srv=(.*)$/); if(m){ srvOverride=decodeURIComponent(m[1]); } else if(a) engineArgs.push(a); });
+
+  $('who').textContent = LS.get('q2_nick') || 'WASM Player';
+  testServer(getSrv()); pollRooms();            // además "despierta" al servidor (el plan gratis de Render duerme)
+  setInterval(pollRooms,10000);
+
+  // ---------- Motor ----------
+  window.Module = {
+    _canLockPointer:true,
+    canvas:canvas,
+    print:function(t){ if(arguments.length>1) t=Array.prototype.slice.call(arguments).join(' ');
+      console.log(t); out.value+=t+"\n"; out.scrollTop=out.scrollHeight;
+      if(typeof t!=='string' || !netIntent) return;
+      if(/^(loopback|localhost|127\.)/i.test(t.trim())) return;
+      if(/Connecting to/.test(t)) setOn('Conectando…','warn');
+      else if(/: client_connect/.test(t)) setOn('Conectado','ok');
+      else if(/timed out|Server disconnected|Disconnected from server/.test(t)){ setOn('Desconectado','bad'); netIntent=false; } },
+    printErr:function(t){ console.warn(t); },
+    setStatus:function(t){
+      var m=t&&t.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+      if(m) setStatus(m[1],parseFloat(m[2]),parseFloat(m[4])); else if(t) setStatus(t);
+    },
+    totalDependencies:0,
+    monitorRunDependencies:function(left){
+      Module.totalDependencies=Math.max(Module.totalDependencies,left);
+      Module.setStatus(left?'Preparando… ('+(Module.totalDependencies-left)+'/'+Module.totalDependencies+')':'');
+    },
+    preRun:[function(){
+      addRunDependency('pak0');
+      loadPak().then(function(){ removeRunDependency('pak0'); })
+        .catch(function(e){ setStatus('Error: '+e.message); console.error(e); });
+    }],
+    onRuntimeInitialized:function(){
+      $('card').style.display='none'; $('game').style.display='grid'; started=true; canvas.focus();
+    },
+    hideConsole:function(){ out.style.display='none'; $('stage').style.display='block'; canvas.focus(); },
+    showConsole:function(){ $('stage').style.display='none'; out.style.display='block'; out.scrollTop=out.scrollHeight; out.focus(); },
+    exportFile:function(p){ try{ var a=document.createElement('a'); var b=new Blob([new Uint8Array(FS.readFile(p))]);
+      a.href=URL.createObjectURL(b); a.download=p.split('/').pop(); a.click(); }catch(e){console.error(e);} },
+    winResized:function(){},
+    setGamma:function(g){ g=Number(Number(g).toFixed(2)); canvas.style.filter=g<0?null:'brightness('+(g*2)+')'; },
+    captureMouse:function(){
+      if(Module._canLockPointer && !Module._attemptPointerLock()){
+        Module._canLockPointer=false;
+        document.addEventListener('keydown',Module._lockPointerOnKey);
+      }
+    },
+    _attemptPointerLock:function(){ if(document.pointerLockElement===null) canvas.requestPointerLock(); return document.pointerLockElement!==null; },
+    _lockPointerOnKey:function(e){
+      if(e.key==='Escape'||Module._attemptPointerLock()){
+        document.removeEventListener('keydown',Module._lockPointerOnKey); Module._canLockPointer=true; }
+    },
+    softExit:function(s){ console.info('Salió con código',s); },
+    onMenuEvent:function(id){ if(id===2||id===3) openMP(id===3?'create':'join'); },   // el motor avisa: 2 = join network server, 3 = start network server
+    pendingCmd:'',
+    arguments: engineArgs
+  };
+  window.onerror=function(){ setStatus('Excepción, mirá la consola del navegador (F12)'); };
+
+  $('playBtn').onclick=function(){
+    this.disabled=true; $('loading').style.display='block'; setStatus('Descargando…',0,100);
+    var srv=getSrv(), nick=LS.get('q2_nick'), args=Module.arguments.slice();
+    if(nick){ args.push('+name',nick); }
+    if(srv){
+      Module.websocket={url:srv.replace(/\/+$/,'').replace(/\?.*$/,'')+'/?room=main',subprotocol:'binary'};
+    }
+    Module.arguments=args;
+    var s=document.createElement('script'); s.src='index.js'; s.async=true;
+    s.onerror=function(){ setStatus('Falta index.js: compilá el juego primero'); };
+    document.body.appendChild(s);
+  };
+
+  // ---------- Barra de abajo ----------
+  $('fsBtn').onclick=function(){ var el=$('stage'); (el.requestFullscreen||el.webkitRequestFullscreen).call(el); };
+  $('clearBtn').onclick=function(){
+    if(!confirm('¿Borrar partidas y configuración guardadas?')) return;
+    var r=indexedDB.deleteDatabase('/qwasm2'); r.onsuccess=r.onerror=r.onblocked=function(){ location.reload(); };
+  };
+  // Esc en pantalla completa (Chrome/Edge): Keyboard Lock deja Esc para el juego (abre el menú / pausa en solitario).
+  function lockEsc(){ if(navigator.keyboard && navigator.keyboard.lock){
+    navigator.keyboard.lock(['Escape']).then(function(){ console.info('[teclado] Esc capturado por el juego'); })
+      .catch(function(e){ console.warn('[teclado] no se pudo capturar Esc:', e); }); } }
+  function unlockEsc(){ if(navigator.keyboard && navigator.keyboard.unlock) navigator.keyboard.unlock(); }
+  function onFs(){ if(document.fullscreenElement||document.webkitFullscreenElement) lockEsc(); else unlockEsc(); }
+  document.addEventListener('fullscreenchange',onFs); document.addEventListener('webkitfullscreenchange',onFs);
+
+  var frames=0,last=performance.now();
+  (function tick(){ frames++; var n=performance.now();
+    if(n-last>=1000){ $('fps').textContent=Math.round(frames*1000/(n-last))+' FPS'; frames=0; last=n; }
+    requestAnimationFrame(tick); })();
+})();
+</script>
+</body>
+</html>
