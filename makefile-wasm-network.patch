@@ -1,0 +1,19 @@
+--- a/Qwasm2-main/Makefile	2026-11-01 03:31:12.804143939 +0000
++++ b/Qwasm2-main/Makefile	2026-11-01 03:31:12.798529469 +0000
+@@ -1084,10 +1084,15 @@
+ else
+ CLIENT_OBJS_ += \
+ 	src/backends/unix/main.o \
+-	src/backends/unix/network.o \
+ 	src/backends/unix/signalhandler.o \
+ 	src/backends/unix/system.o \
+ 	src/backends/unix/shared/hunk.o
++ifeq ($(YQ2_OSTYPE), Emscripten)
++# Red por WebSocket + relay (estructura del Quake 1 web) en vez de sockets UDP
++CLIENT_OBJS_ += src/backends/wasm/network.o
++else
++CLIENT_OBJS_ += src/backends/unix/network.o
++endif
+ endif
+ 
+ ifeq ($(YQ2_OSTYPE), Emscripten)

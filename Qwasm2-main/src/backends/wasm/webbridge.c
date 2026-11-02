@@ -6,6 +6,7 @@
  */
 
 #include "header/webbridge.h"
+#include "header/webnet.h"
 #include "../../common/header/common.h"
 
 #include <emscripten.h>
@@ -21,6 +22,9 @@ void wasm_menu_event(int id)
 void wasm_poll_commands(void)
 {
 	static char buf[256];
+
+	/* Red online: paquetes, estado de la sala y comandos de online.js (una vez por frame) */
+	WebNet_Tick();
 
 	/* Copia (solo ASCII imprimible) el comando pendiente de la pagina a buf */
 	int n = EM_ASM_INT({
