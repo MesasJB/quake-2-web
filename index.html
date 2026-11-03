@@ -51,30 +51,20 @@
   .f input[type=text]{background:#0a0c12;color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;font-size:13px;width:100%}
   .f button{background:#fff;color:#000;border:0;border-radius:8px;padding:8px 12px;font-weight:600}
   .chk{display:flex;gap:6px;align-items:center;color:var(--mut);font-size:12.5px}
-  /* ---------- online: lista de salas, name?: y avisos (estructura del Quake 1 web) ---------- */
-  .dot{width:9px;height:9px;border-radius:50%;background:#5b6379;flex:none;display:inline-block}
-  .dot.ok{background:#2fd06b}.dot.connecting{background:#e6b422}.dot.bad{background:#e5534b}
-  #roomCount{background:#fff;color:#000;border-radius:99px;padding:0 7px;font-size:11px;font-weight:700;margin-left:6px;letter-spacing:0}
-  #roomCount:empty{display:none}
-  #roomList{display:flex;flex-direction:column;gap:8px;min-height:60px;max-height:min(52vh,430px);overflow-y:auto;margin:14px 0}
-  #roomList .room{margin-top:0}
-  .room .info{flex:1;min-width:0}
-  .room .rname{color:var(--tx);font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .room .rmeta{font-size:12px}
-  .room .mine{font-size:11px;color:#2fd06b;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
-  .room button[disabled]{opacity:.5;cursor:default}
-  .empty{color:var(--dim);font-size:12.5px;line-height:1.45}
-  .srv{display:flex;gap:6px;margin-top:8px}
-  .srv input{flex:1;min-width:0;background:#0a0c12;color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font:inherit;font-size:12px}
-  .srv button{background:#fff;color:#000;border:0;border-radius:8px;padding:7px 12px;font-weight:600;font-size:12px}
-  #namePrompt,#toast{position:absolute;left:50%;transform:translateX(-50%);z-index:5;border-radius:8px;font-size:13px}
-  #namePrompt{top:10px;display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(16,18,26,.96);border:1px solid var(--btnline);box-shadow:0 8px 30px rgba(0,0,0,.6)}
-  #namePrompt[hidden],#toast[hidden]{display:none}
-  #namePrompt label{color:#e6b422;font-weight:700}
-  #namePrompt input{width:150px;background:#0a0c12;color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font:inherit}
-  #namePrompt button{background:#fff;color:#000;border:0;border-radius:6px;padding:5px 10px;font-weight:600;font-size:12px}
-  #namePrompt button.sec{background:transparent;color:var(--mut);border:1px solid var(--btnline)}
-  #toast{bottom:12px;padding:8px 14px;background:rgba(16,18,26,.94);border:1px solid var(--line);color:var(--tx);max-width:90%;text-align:center}
+  /* ---------- ventanita Multiplayer (name? / salas) ---------- */
+  #mp{position:absolute;inset:0;z-index:5;display:none;align-items:center;justify-content:center;background:rgba(3,4,8,.72);padding:12px}
+  #mp.open{display:flex}
+  .mpbox{width:min(480px,100%);max-height:100%;overflow:auto;background:var(--card);border:1px solid var(--btnline);border-radius:12px;padding:18px 18px 16px;color:var(--mut);font-size:13px;line-height:1.5;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+  .mpbox h4{margin:0 0 4px;font-size:15px;color:var(--tx);letter-spacing:.04em}
+  .mpbox .row2{display:flex;gap:8px;align-items:center;margin:10px 0 4px}
+  .mpbox input[type=text],.mpbox select{flex:1;min-width:0;background:#0a0c12;color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:9px 11px;font:inherit}
+  .mpbox button{background:#fff;color:#000;border:0;border-radius:8px;padding:9px 14px;font-weight:600;font-size:13px}
+  .mpbox button.ghost{background:transparent;color:var(--mut);border:1px solid var(--btnline)}
+  .mpbox button[disabled]{opacity:.5}
+  .mpbox .err{color:#f08a8a;margin-top:8px;min-height:18px}
+  .mpbox .sep{border-top:1px solid var(--line);margin:14px 0 10px}
+  .mpbox .lab{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:2px 0 6px}
+  .nm{font-size:22px;font-weight:700;color:var(--tx);letter-spacing:.02em}
   @media (max-width:900px){.shell{grid-template-columns:1fr}h1{font-size:44px}}
 </style>
 </head>
@@ -92,13 +82,31 @@
   <div>
     <div class="stage" id="stage">
       <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
-      <div id="namePrompt" hidden>
-        <label for="nameInput">name?:</label>
-        <input id="nameInput" maxlength="15" autocomplete="off" spellcheck="false">
-        <button id="nameOk">OK</button>
-        <button id="nameCancel" class="sec">&#10005;</button>
+      <div id="mp" role="dialog" aria-label="Multiplayer">
+        <div class="mpbox">
+          <div id="mpReg">
+            <h4>Multiplayer</h4>
+            <div class="nm">name?:</div>
+            <div>Elegí tu nombre para jugar online (hasta 15 letras, números, espacio, - y _).</div>
+            <div class="row2"><input type="text" id="mpName" maxlength="15" placeholder="tu nombre" autocomplete="off" spellcheck="false"><button id="mpRegBtn">Registrarme</button></div>
+            <div class="err" id="mpErr1"></div>
+            <div class="row2" style="justify-content:flex-end"><button class="ghost" data-close>Cerrar</button></div>
+          </div>
+          <div id="mpRooms" style="display:none">
+            <h4>Salas online</h4>
+            <div>Jugador: <b id="mpWho" style="color:var(--tx)"></b> <button class="ghost" id="mpChange" style="padding:3px 9px;font-size:12px;margin-left:6px">cambiar</button></div>
+            <div class="sep"></div>
+            <div class="lab">Salas disponibles</div>
+            <div id="mpList">Buscando salas…</div>
+            <div class="sep"></div>
+            <div class="lab">Crear sala</div>
+            <div class="row2"><input type="text" id="mpRName" maxlength="20" placeholder="nombre de la sala" autocomplete="off" spellcheck="false"></div>
+            <div class="row2"><select id="mpMap"></select><select id="mpMax"><option value="2">2 jug.</option><option value="3">3 jug.</option><option value="4" selected>4 jug.</option></select></div>
+            <div class="row2"><button id="mpCreate">Crear y entrar</button><button class="ghost" data-close style="margin-left:auto">Cerrar</button></div>
+            <div class="err" id="mpErr2"></div>
+          </div>
+        </div>
       </div>
-      <div id="toast" hidden></div>
     </div>
     <textarea id="output" readonly></textarea>
     <div class="bar">
@@ -109,21 +117,14 @@
     </div>
   </div>
   <aside class="side" id="online">
-    <h3>Salas online <span id="roomCount"></span></h3>
-    <div class="st"><i id="netDot" class="dot"></i><span id="netText">Sin conectar</span></div>
-    <div>Jugador: <b id="myName">player</b><br>
-    Para cambiar tu nombre: <b>Multiplayer &rarr; join network server</b> (aparece <b>name?:</b> arriba).<br>
-    Para crear una sala: <b>Multiplayer &rarr; start network server</b>.</div>
-    <div id="roomList"></div>
-    <details>
-      <summary>Servidor</summary>
-      <div class="srv"><input id="srvInput" spellcheck="false" autocomplete="off"><button id="srvSave">Guardar</button></div>
-    </details>
+    <h3>Salas online</h3>
+    <div class="st"><i id="dot"></i><span id="onStatus">Sin conectar</span></div>
+    <div>Jugador: <b id="who">WASM Player</b><br>
+    Para registrarte o cambiar tu nombre: <b>Multiplayer → join network server</b> (aparece <b>name?:</b>).</div>
+    <div class="rooms" id="rooms">Buscando salas…</div>
   </aside>
 </div>
 
-<script>window.Q2_DEFAULT_SERVER = 'wss://quake-2-web.onrender.com';   // relay por defecto (se puede cambiar abajo en "Servidor")</script>
-<script src="online.js"></script>
 <script>
 // ---- Audio: el navegador bloquea el sonido hasta que hay interacción. Capturamos los
 // AudioContext que crea el motor y los reanudamos en cada clic/tecla/captura de mouse.
@@ -142,6 +143,7 @@
 })();
 
 (function(){
+  var DEFAULT_SERVER = 'wss://quake-2-web.onrender.com';   // servidor online incluido: nadie tiene que pegar ningún link
   var PAK_PARTS = 4, PAK_BASE = 'baseq2/pak0.part';
   var $ = function(i){return document.getElementById(i)};
   var canvas=$('canvas'), out=$('output'), statusEl=$('status'), prog=$('progress');
@@ -166,19 +168,137 @@
     FS.close(stream);
   }
 
-  // ---------- Online ----------
-  // Todo el online (WebSocket, lista de salas, name?:) lo maneja online.js, igual que en el Quake 1 web.
+  // ---------- Salas online ----------
+  var onStatus=$('onStatus'), dot=$('dot');
+  function setOn(t,cls){ onStatus.textContent=t; dot.className=cls||''; }
+  function normUrl(u){
+    u=(u||'').trim(); if(!u) return '';
+    u=u.replace(/^http:\/\//i,'ws://').replace(/^https:\/\//i,'wss://');
+    if(!/^wss?:\/\//i.test(u)) u='wss://'+u;
+    return u;
+  }
+  function httpBase(ws){ return ws.replace(/^ws/i,'http').replace(/(https?:\/\/[^\/]+).*/,'$1'); }
+  var srvOverride='';   // solo para pruebas: abrir la página con ?srv=wss://otro-servidor
+  function getSrv(){ return normUrl(srvOverride||DEFAULT_SERVER); }
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+
+  var started=false, netIntent=false;
+  function sendCmd(c){ Module.pendingCmd=String(c).replace(/[^\x20-\x7e]/g,' ').slice(0,200); }   // el motor lo ejecuta en el próximo frame
+  function getNick(){ return LS.get('q2_nick'); }
+  function apiBase(){ var u=getSrv(); return u?httpBase(u):''; }
+  function fetchRooms(){ var b=apiBase(); if(!b) return Promise.reject(new Error('sin servidor'));
+    return fetch(b+'/rooms',{cache:'no-store'}).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }); }
+  function roomLine(r){ return '<div class="room"><div><strong>'+esc(r.name)+'</strong><span>'+esc(r.mode)+' · '+esc(r.map)+' · '+r.players+'/'+r.maxclients+'</span></div><button data-join="'+esc(r.id)+'"'+(r.online&&r.players<r.maxclients?'':' disabled')+'>Unirse</button></div>'; }
+  function renderInto(el,data){
+    if(!getSrv()){ el.textContent='Configurá un servidor para ver las salas.'; return; }
+    if(!data||!data.rooms||!data.rooms.length){ el.textContent='No hay salas todavía. Si el servidor estaba dormido, esperá 1 minuto.'; return; }
+    el.innerHTML=data.rooms.map(roomLine).join('');
+  }
+  var lastData=null;
+  function pollRooms(){
+    if(!getSrv()){ renderInto($('rooms'),null); return; }
+    fetchRooms().then(function(d){ lastData=d; renderInto($('rooms'),d); if(mpOpen) renderInto($('mpList'),d); fillMaps(d); })
+      .catch(function(){ lastData=null; renderInto($('rooms'),null); if(mpOpen) $('mpList').textContent='No se pudo conectar con el servidor. Reintentando…'; });
+  }
+  function fillMaps(d){
+    var sel=$('mpMap'); if(!d||!d.maps||sel.options.length) return;
+    d.maps.forEach(function(m){ var o=document.createElement('option'); o.value=m; o.textContent=m; sel.appendChild(o); });
+  }
+  // Unirse a una sala: se cambia la URL del WebSocket (una sala = un servidor) y se manda "connect" al motor.
+  // Cada sala usa un nombre de host distinto para que el motor abra una conexión nueva.
+  function joinRoom(id){
+    var nick=getNick();
+    if(!nick){ openMP(); return; }
+    var base=getSrv(); if(!base){ openMP(); return; }
+    base=base.replace(/\/+$/,'').replace(/\?.*$/,'');
+    Module.websocket={url:base+'/?room='+encodeURIComponent(id),subprotocol:'binary'};
+    sendCmd('name '+nick+';connect sala-'+id.replace(/[^a-z0-9]/gi,'')+':27910');
+    netIntent=true; setOn('Conectando…','warn');
+    closeMP();
+  }
+  document.addEventListener('click',function(e){
+    var j=e.target.closest&&e.target.closest('[data-join]'); if(j&&!j.disabled) joinRoom(j.getAttribute('data-join'));
+  });
+
+  // ---------- Ventanita Multiplayer ----------
+  var mpOpen=false, mpTimer=null;
+  function showStep(){
+    var reg=!!getNick();
+    $('mpReg').style.display=reg?'none':'block'; $('mpRooms').style.display=reg?'block':'none';
+    if(reg){ $('mpWho').textContent=getNick(); $('mpErr2').textContent=''; renderInto($('mpList'),lastData); pollRooms(); }
+    else { $('mpName').value=''; $('mpErr1').textContent=''; setTimeout(function(){ $('mpName').focus(); },30); }
+  }
+  function openMP(mode){
+    if(mpOpen) return; mpOpen=true;
+    try{ document.exitPointerLock(); }catch(e){}
+    $('mp').classList.add('open'); showStep();
+    if(mode==='create'&&getNick()) setTimeout(function(){ $('mpRName').focus(); },60);
+    mpTimer=setInterval(pollRooms,4000);
+  }
+  function closeMP(){ mpOpen=false; $('mp').classList.remove('open'); clearInterval(mpTimer); try{ canvas.focus(); }catch(e){} }
+  function cleanNick(v){ return (v||'').replace(/[^\w\- ]/g,'').trim().slice(0,15); }
+  function doRegister(){
+    var n=cleanNick($('mpName').value);
+    if(n.length<2){ $('mpErr1').textContent='El nombre tiene que tener al menos 2 caracteres.'; return; }
+    LS.set('q2_nick',n); $('who').textContent=n;
+    sendCmd('name '+n);
+    showStep();
+  }
+  $('mpRegBtn').onclick=doRegister;
+  $('mpChange').onclick=function(){ LS.set('q2_nick',''); showStep(); };
+  $('mpCreate').onclick=function(){
+    var name=($('mpRName').value||'').replace(/[^A-Za-z0-9 _\-]/g,'').trim();
+    if(!name){ $('mpErr2').textContent='Poné un nombre para la sala.'; return; }
+    var btn=this; btn.disabled=true; $('mpErr2').textContent='Creando sala…';
+    fetch(apiBase()+'/rooms',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:name,map:$('mpMap').value||'base1',mode:'coop',maxclients:parseInt($('mpMax').value,10)})})
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,j:j}; }); })
+      .then(function(x){
+        btn.disabled=false;
+        if(!x.ok){ $('mpErr2').textContent=(x.j&&x.j.error)||'No se pudo crear la sala.'; return; }
+        $('mpRName').value=''; $('mpErr2').textContent='';
+        setTimeout(function(){ joinRoom(x.j.id); },1500);       // le damos un momento al servidor para arrancar
+      }).catch(function(){ btn.disabled=false; $('mpErr2').textContent='No se pudo conectar con el servidor.'; });
+  };
+  document.querySelectorAll('[data-close]').forEach(function(b){ b.onclick=closeMP; });
+  // Mientras la ventanita está abierta, el teclado es de la ventanita (que el motor no se coma las teclas)
+  window.addEventListener('keydown',function(e){
+    if(!mpOpen) return;
+    if(e.key==='Escape'){ closeMP(); e.stopImmediatePropagation(); e.preventDefault(); return; }
+    if(e.key==='Enter'){ if($('mpReg').style.display!=='none') doRegister(); else if(document.activeElement===$('mpRName')) $('mpCreate').click(); }
+    e.stopImmediatePropagation();
+  },true);
+  ['keyup','keypress'].forEach(function(t){ window.addEventListener(t,function(e){ if(mpOpen) e.stopImmediatePropagation(); },true); });
+
+  function testServer(url){
+    if(!url){ setOn('Sin conectar'); return; }
+    setOn('Probando servidor…','warn');
+    var done=false, ws;
+    var t=setTimeout(function(){ if(done) return; done=true; try{ws.close();}catch(e){} setOn('No responde (si estaba dormido, esperá 1 minuto)','bad'); },20000);
+    try{ ws=new WebSocket(url,'binary'); }catch(e){ clearTimeout(t); setOn('Dirección inválida','bad'); return; }
+    ws.onopen=function(){ if(done) return; done=true; clearTimeout(t); setOn('Servidor disponible','ok'); try{ws.close();}catch(e){} };
+    ws.onerror=function(){ if(done) return; done=true; clearTimeout(t); setOn('No se pudo conectar al servidor','bad'); };
+  }
   // ?srv=wss://... en la dirección de la página lo guarda una vez
   var rawArgs = location.search.length>1 ? location.search.substr(1).split('&') : [];
   var engineArgs = [];
-  rawArgs.forEach(function(a){ var m=a.match(/^srv=(.*)$/); if(m){ if(window.QOnline) QOnline.setServer(decodeURIComponent(m[1])); } else if(a) engineArgs.push(a); });
+  rawArgs.forEach(function(a){ var m=a.match(/^srv=(.*)$/); if(m){ srvOverride=decodeURIComponent(m[1]); } else if(a) engineArgs.push(a); });
+
+  $('who').textContent = LS.get('q2_nick') || 'WASM Player';
+  testServer(getSrv()); pollRooms();            // además "despierta" al servidor (el plan gratis de Render duerme)
+  setInterval(pollRooms,10000);
 
   // ---------- Motor ----------
   window.Module = {
     _canLockPointer:true,
     canvas:canvas,
     print:function(t){ if(arguments.length>1) t=Array.prototype.slice.call(arguments).join(' ');
-      console.log(t); out.value+=t+"\n"; out.scrollTop=out.scrollHeight; },
+      console.log(t); out.value+=t+"\n"; out.scrollTop=out.scrollHeight;
+      if(typeof t!=='string' || !netIntent) return;
+      if(/^(loopback|localhost|127\.)/i.test(t.trim())) return;
+      if(/Connecting to/.test(t)) setOn('Conectando…','warn');
+      else if(/: client_connect/.test(t)) setOn('Conectado','ok');
+      else if(/timed out|Server disconnected|Disconnected from server/.test(t)){ setOn('Desconectado','bad'); netIntent=false; } },
     printErr:function(t){ console.warn(t); },
     setStatus:function(t){
       var m=t&&t.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
@@ -195,7 +315,7 @@
         .catch(function(e){ setStatus('Error: '+e.message); console.error(e); });
     }],
     onRuntimeInitialized:function(){
-      $('card').style.display='none'; $('game').style.display='grid'; canvas.focus();
+      $('card').style.display='none'; $('game').style.display='grid'; started=true; canvas.focus();
     },
     hideConsole:function(){ out.style.display='none'; $('stage').style.display='block'; canvas.focus(); },
     showConsole:function(){ $('stage').style.display='none'; out.style.display='block'; out.scrollTop=out.scrollHeight; out.focus(); },
@@ -215,7 +335,7 @@
         document.removeEventListener('keydown',Module._lockPointerOnKey); Module._canLockPointer=true; }
     },
     softExit:function(s){ console.info('Salió con código',s); },
-    onMenuEvent:function(id){ if((id===2||id===3) && window.QOnline) QOnline.askName(''); },   // el motor avisa: 2 = join network server, 3 = start network server
+    onMenuEvent:function(id){ if(id===2||id===3) openMP(id===3?'create':'join'); },   // el motor avisa: 2 = join network server, 3 = start network server
     pendingCmd:'',
     arguments: engineArgs
   };
@@ -223,6 +343,12 @@
 
   $('playBtn').onclick=function(){
     this.disabled=true; $('loading').style.display='block'; setStatus('Descargando…',0,100);
+    var srv=getSrv(), nick=LS.get('q2_nick'), args=Module.arguments.slice();
+    if(nick){ args.push('+name',nick); }
+    if(srv){
+      Module.websocket={url:srv.replace(/\/+$/,'').replace(/\?.*$/,'')+'/?room=main',subprotocol:'binary'};
+    }
+    Module.arguments=args;
     var s=document.createElement('script'); s.src='index.js'; s.async=true;
     s.onerror=function(){ setStatus('Falta index.js: compilá el juego primero'); };
     document.body.appendChild(s);

@@ -1,21 +1,18 @@
-SERVIDOR ONLINE DE QUAKE 2 WEB (relay de salas)
+SERVIDOR ONLINE DE QUAKE 2 WEB (salas)
 
-Es el mismo relay del Quake 1 web (mismo protocolo). NO ejecuta el juego: el que crea una
-sala (Multiplayer > start network server) corre el servidor en su navegador, y este relay
-solo anuncia las salas y reenvia paquetes entre los jugadores de cada sala.
+Un solo contenedor Docker con:
+ - proxy.js : WebSocket <-> UDP y administrador de salas (cada sala = un servidor dedicado q2ded)
+ - q2ded    : compilado desde Qwasm2-main
 
-Local (juego + online en el mismo servidor)
-  node server/server.js          (desde la carpeta que tiene index.html y baseq2)
-  abri http://localhost:8765
-
-Render (gratis), solo relay
+Render (gratis)
  1. render.com -> New -> Web Service -> tu repositorio de GitHub.
- 2. Runtime: Docker. Dockerfile Path: server/Dockerfile. Build context: . (la raiz). Instance: Free.
- 3. Cuando diga "Live", abri https://TU-APP.onrender.com/ : tiene que decir "Quake online OK".
- 4. Si tu URL no es quake-2-web.onrender.com, cambiala en index.html (window.Q2_DEFAULT_SERVER)
-    o pegala en el panel "Servidor" de la pagina.
- - Plan gratis: se duerme tras ~15 min sin trafico (la primera conexion espera ~1 min).
+ 2. Runtime: Docker. Dockerfile Path: server/Dockerfile. Build context: . (la raíz). Instance type: Free.
+ 3. Cuando diga "Live", abrí https://TU-APP.onrender.com/rooms: tiene que mostrar la "Sala principal".
+ 4. En el juego: Multiplayer -> ventanita -> registrate y pegá wss://TU-APP.onrender.com (o usá el panel "Servidor").
 
-Variables opcionales: PORT, HOST, STATIC_ROOT, MAX_CLIENTS (500), MAX_PER_IP (40).
-
-Archivos viejos que ya no se usan (podes borrarlos): server/proxy.js, server/start.sh
+Salas
+ - Sala principal: siempre abierta (coop base1).
+ - Los jugadores crean más salas desde la ventanita de Multiplayer (máx. 3 extra, de hasta 4 jugadores, coop).
+ - Las salas creadas se cierran solas a los 10 min sin jugadores.
+ - Variables opcionales: MAX_ROOMS, ROOM_IDLE_MS, Q2_MAP. Deathmatch (q2dm1..8) requiere pak1.pak y Q2_DM=1.
+ - Plan gratis de Render: 512 MB de RAM y se duerme tras ~15 min sin tráfico (el primero espera ~1 min).

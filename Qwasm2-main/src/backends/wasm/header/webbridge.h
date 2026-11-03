@@ -3,8 +3,7 @@
  *
  * wasm_menu_event(id)   avisa a la pagina (Module.onMenuEvent(id)) que se abrio un menu.
  *                       id 2 = join network server, id 3 = start network server.
- * wasm_poll_commands()  una vez por frame: corre la red online (WebNet_Tick, ver network.c) y
- *                       ejecuta en el motor el comando que la pagina dejo en Module.pendingCmd.
+ * wasm_poll_commands()  ejecuta en el motor el comando que la pagina dejo en Module.pendingCmd.
  */
 
 #ifndef WASM_WEBBRIDGE_H
