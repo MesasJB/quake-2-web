@@ -3,6 +3,8 @@
  *
  * OJO: dentro de EM_ASM no puede haber comas "sueltas" (solo dentro de parentesis)
  * ni comillas simples vacias, porque el preprocesador de C las toma como argumentos.
+ * Tampoco se usan funciones auxiliares de Emscripten (stringToUTF8, HEAPU8...): el texto
+ * se pasa caracter por caracter para no depender de que esten incluidas en la compilacion.
  */
 
 #include "header/webbridge.h"
@@ -21,20 +23,30 @@ void wasm_menu_event(int id)
 void wasm_poll_commands(void)
 {
 	static char buf[256];
+	int i, n;
 
-	/* Copia (solo ASCII imprimible) el comando pendiente de la pagina a buf */
-	int n = EM_ASM_INT({
+	/* Toma el comando pendiente de la pagina (solo ASCII imprimible) y devuelve su largo */
+	n = EM_ASM_INT({
 		var c = Module.pendingCmd;
 		if (!c) return 0;
 		Module.pendingCmd = "";
-		c = String(c).replace(/[^ -~]/g, " ").slice(0, $1 - 1);
-		stringToUTF8(c, $0, $1);
+		c = String(c).replace(/[^ -~]/g, " ").slice(0, $0);
+		Module.curCmd = c;
 		return c.length;
-	}, buf, (int)sizeof(buf));
+	}, (int)sizeof(buf) - 1);
 
-	if (n > 0)
+	if (n <= 0)
 	{
-		Cbuf_AddText(buf);
-		Cbuf_AddText("\n");
+		return;
 	}
+
+	for (i = 0; i < n; i++)
+	{
+		buf[i] = (char)EM_ASM_INT({ return Module.curCmd.charCodeAt($0); }, i);
+	}
+
+	buf[n] = '\0';
+
+	Cbuf_AddText(buf);
+	Cbuf_AddText("\n");
 }

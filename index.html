@@ -187,18 +187,19 @@
   function getNick(){ return LS.get('q2_nick'); }
   function apiBase(){ var u=getSrv(); return u?httpBase(u):''; }
   function fetchRooms(){ var b=apiBase(); if(!b) return Promise.reject(new Error('sin servidor'));
-    return fetch(b+'/rooms',{cache:'no-store'}).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }); }
+    var t=new Promise(function(_,rej){ setTimeout(function(){ rej(new Error('timeout')); },20000); });
+    return Promise.race([fetch(b+'/rooms',{cache:'no-store'}).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }),t]); }
   function roomLine(r){ return '<div class="room"><div><strong>'+esc(r.name)+'</strong><span>'+esc(r.mode)+' · '+esc(r.map)+' · '+r.players+'/'+r.maxclients+'</span></div><button data-join="'+esc(r.id)+'"'+(r.online&&r.players<r.maxclients?'':' disabled')+'>Unirse</button></div>'; }
   function renderInto(el,data){
     if(!getSrv()){ el.textContent='Configurá un servidor para ver las salas.'; return; }
-    if(!data||!data.rooms||!data.rooms.length){ el.textContent='No hay salas todavía. Si el servidor estaba dormido, esperá 1 minuto.'; return; }
+    if(!data||!data.rooms||!data.rooms.length){ el.textContent='Buscando salas… (si el servidor estaba dormido, tarda hasta 1 minuto)'; return; }
     el.innerHTML=data.rooms.map(roomLine).join('');
   }
   var lastData=null;
   function pollRooms(){
     if(!getSrv()){ renderInto($('rooms'),null); return; }
-    fetchRooms().then(function(d){ lastData=d; renderInto($('rooms'),d); if(mpOpen) renderInto($('mpList'),d); fillMaps(d); })
-      .catch(function(){ lastData=null; renderInto($('rooms'),null); if(mpOpen) $('mpList').textContent='No se pudo conectar con el servidor. Reintentando…'; });
+    fetchRooms().then(function(d){ lastData=d; renderInto($('rooms'),d); if(mpOpen) renderInto($('mpList'),d); fillMaps(d); if(!netIntent) setOn('Servidor disponible','ok'); })
+      .catch(function(){ lastData=null; renderInto($('rooms'),null); if(!netIntent) setOn('Servidor sin respuesta (si estaba dormido, esperá 1 minuto)','warn'); if(mpOpen) $('mpList').textContent='No se pudo conectar con el servidor. Reintentando…'; });
   }
   function fillMaps(d){
     var sel=$('mpMap'); if(!d||!d.maps||sel.options.length) return;
@@ -285,7 +286,7 @@
   rawArgs.forEach(function(a){ var m=a.match(/^srv=(.*)$/); if(m){ srvOverride=decodeURIComponent(m[1]); } else if(a) engineArgs.push(a); });
 
   $('who').textContent = LS.get('q2_nick') || 'WASM Player';
-  testServer(getSrv()); pollRooms();            // además "despierta" al servidor (el plan gratis de Render duerme)
+  setOn('Buscando servidor…','warn'); pollRooms();            // además despierta al servidor (el plan gratis de Render duerme)
   setInterval(pollRooms,10000);
 
   // ---------- Motor ----------
@@ -344,7 +345,6 @@
   $('playBtn').onclick=function(){
     this.disabled=true; $('loading').style.display='block'; setStatus('Descargando…',0,100);
     var srv=getSrv(), nick=LS.get('q2_nick'), args=Module.arguments.slice();
-    if(nick){ args.push('+name',nick); }
     if(srv){
       Module.websocket={url:srv.replace(/\/+$/,'').replace(/\?.*$/,'')+'/?room=main',subprotocol:'binary'};
     }
