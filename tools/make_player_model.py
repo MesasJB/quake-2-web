@@ -5,7 +5,7 @@ que YA viene dentro de tu pak0.pak, porque ese pak no trae los modelos de jugado
 (sin ellos los otros jugadores se ven como un rombo).
 
 Uso:  python make_player_model.py ruta/a/pak0.pak  Qwasm2-main/wasm/baseq2
-Escribe:  <salida>/players/male/tris.md2, grunt.pcx, grunt_i.pcx
+Escribe:  <salida>/players/male/tris.md2, weapon.md2, grunt.pcx, grunt_i.pcx
 """
 import os, struct, sys
 
@@ -78,6 +78,26 @@ def build_md2(src):
     struct.pack_into('<i', head, 16 * 4, ofs_end)        # ofs_end
     return bytes(head) + body + glcmds
 
+# ---- arma "invisible" ----
+# El motor solo acepta un jugador si carga modelo + textura + icono + modelo de arma (weapon.md2).
+# El soldado ya trae su arma en la malla, asi que el arma separada es un triangulo sin area (no se ve),
+# con los mismos 199 frames para que el motor no avise de "frames inexistentes".
+def build_weapon_md2(nframes=199):
+    nskins, nxyz, nst, ntris = 1, 3, 3, 1
+    ofs_skins = 68; ofs_st = ofs_skins + 64 * nskins; ofs_tris = ofs_st + 4 * nst
+    ofs_frames = ofs_tris + 12 * ntris
+    framesize = 40 + 4 * nxyz
+    glcmds = struct.pack('<i', 3) + b''.join(struct.pack('<ffi', 0.0, 0.0, i) for i in range(3)) + struct.pack('<i', 0)
+    ofs_glcmds = ofs_frames + framesize * nframes; ofs_end = ofs_glcmds + len(glcmds)
+    head = struct.pack('<17i', 844121161, 8, 64, 64, framesize, nskins, nxyz, nst, ntris, len(glcmds) // 4,
+                       nframes, ofs_skins, ofs_st, ofs_tris, ofs_frames, ofs_glcmds, ofs_end)
+    skin = b'players/male/grunt.pcx'.ljust(64, b'\0')
+    st = struct.pack('<6h', 0, 0, 1, 0, 0, 1)
+    tri = struct.pack('<6h', 0, 1, 2, 0, 1, 2)
+    frame = struct.pack('<6f', 1, 1, 1, 0, 0, 0) + b'w'.ljust(16, b'\0') + bytes([0, 0, 0, 0]) * 3
+    assert len(frame) == framesize
+    return head + skin + st + tri + frame * nframes + glcmds
+
 # ---- PCX (icono 32x32 con la misma paleta) ----
 def pcx_decode(d):
     xmin, ymin, xmax, ymax = struct.unpack('<4H', d[4:12]); w, h = xmax - xmin + 1, ymax - ymin + 1
@@ -118,6 +138,7 @@ if __name__ == '__main__':
     get = read_pak(pak)
     d = os.path.join(out, 'players', 'male'); os.makedirs(d, exist_ok=True)
     open(os.path.join(d, 'tris.md2'), 'wb').write(build_md2(get('models/monsters/soldier/tris.md2')))
+    open(os.path.join(d, 'weapon.md2'), 'wb').write(build_weapon_md2())
     skin = get('models/monsters/soldier/skin.pcx')
     open(os.path.join(d, 'grunt.pcx'), 'wb').write(skin)
     open(os.path.join(d, 'grunt_i.pcx'), 'wb').write(icon(skin))
