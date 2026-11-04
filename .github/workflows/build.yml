@@ -1,0 +1,62 @@
+name: Compilar y publicar Quake 2
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: latest
+
+      - name: Compilar GL4ES (con -fPIC)
+        run: |
+          git clone https://github.com/ptitseb/gl4es.git $HOME/gl4es_pic
+          cd $HOME/gl4es_pic
+          python3 - <<'PY'
+          p='CMakeLists.txt'; s=open(p).read()
+          i=s.index('Emscripten'); j=s.index('add_definitions(',i); k=s.index(')',j)
+          s=s[:k]+' -fPIC'+s[k:]; open(p,'w').write(s)
+          PY
+          mkdir -p build && cd build
+          emcmake cmake .. -DSTATICLIB=ON -DNOX11=ON -DNOEGL=ON -DDEFAULT_ES=2
+          emmake make -j$(nproc)
+          cd .. && mkdir -p lib && (cp -n lib*/libGL.a lib/ 2>/dev/null || cp -n build/lib/libGL.a lib/ || true)
+
+      - name: Compilar Qwasm2
+        run: |
+          cd Qwasm2-main
+          emmake make -j$(nproc) GL4ES_PATH=$HOME/gl4es_pic
+
+      - name: Armar el sitio
+        run: |
+          mkdir _site
+          cp index.html _site/
+          cp -r baseq2 _site/
+          cd Qwasm2-main/release
+          cp index.js index.wasm index.data game_baseq2.wasm ref_soft.wasm ref_gl1.wasm ref_gles3.wasm ../../_site/
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
